@@ -3,7 +3,8 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
-import productosRouter from './routes/productos.js'
+import productosRouter from './routes/productos.js';
+
 dotenv.config();
 
 const app = express();
@@ -29,7 +30,7 @@ app.use(express.json({ limit: '10kb' }));
 // Rate limiting más flexible
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutos
-  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Más límite en desarrollo
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000, // Más alto en desarrollo
   message: 'Demasiadas peticiones desde esta IP, por favor intenta más tarde'
 });
 app.use('/api', limiter);
@@ -39,7 +40,7 @@ app.use('/api', limiter);
 // ======================
 app.use('/api/productos', productosRouter);
 
-// Ruta de salud para verificar que el backend funciona
+// Ruta de salud
 app.get('/health', (req, res) => {
   res.status(200).json({
     status: 'healthy',
@@ -48,7 +49,7 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Ruta de inicio para documentación o redirección
+// Ruta raíz
 app.get('/', (req, res) => {
   res.redirect('/health');
 });
@@ -58,16 +59,16 @@ app.get('/', (req, res) => {
 // ======================
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  
+
   const response = {
     error: 'Error interno del servidor',
     message: err.message
   };
-  
+
   if (process.env.NODE_ENV !== 'production') {
     response.stack = err.stack;
   }
-  
+
   res.status(500).json(response);
 });
 
@@ -75,8 +76,17 @@ app.use((err, req, res, next) => {
 // Iniciar Servidor
 // ======================
 const PORT = process.env.PORT || 3001;
+const DEPLOY_URL = process.env.RAILWAY_STATIC_URL; // Railway la define automáticamente
+const isProd = process.env.NODE_ENV === 'production';
+
 app.listen(PORT, () => {
   console.log(`🚀 Servidor iniciado en modo ${process.env.NODE_ENV || 'development'}`);
-  console.log(`🔗 URL: http://localhost:${PORT}`);
+
+  if (isProd && DEPLOY_URL) {
+    console.log(`🔗 URL pública: https://${DEPLOY_URL}`);
+  } else {
+    console.log(`🔗 URL local: http://localhost:${PORT}`);
+  }
+
   console.log(`🌍 Frontend permitido: ${corsOptions.origin.join(', ') || 'Ninguno'}`);
 });
